@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shooter Diary</title>
+
+  <!-- Shooting target favicon -->
+  <link rel="icon" href="https://static.thenounproject.com/png/2099495-512.png" type="image/png" />
+
+  <!-- jsPDF and html2canvas (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --bg:#0f172a;
+      --card:#0b1220;
+      --accent:#06b6d4;
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
+    }
+    * { box-sizing:border-box; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    body {
+      font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+      background:linear-gradient(180deg,#021428 0%, #071430 100%);
+      color:#e6eef8;
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:28px;
+    }
+    .container { width:100%; max-width:980px; }
+    header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    h1 {
+      font-size:28px;
+      margin:0;
+      letter-spacing:0.6px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .top-right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn {
+      background:var(--glass);
+      border:1px solid rgba(255,255,255,0.06);
+      padding:8px 12px;
+      border-radius:8px;
+      color:var(--muted);
+      cursor:pointer;
+    }
+    .card {
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      padding:18px;
+      border-radius:12px;
+      box-shadow:0 4px 18px rgba(2,6,23,0.6);
+      margin-bottom:14px;
+    }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .col { flex:1; min-width:130px; }
+    label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    input[type=text], input[type=number], input[type=file],
+    input[type=date], textarea, select {
+      width:100%;
+      padding:10px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.04);
+      background:transparent;
+      color:inherit;
+    }
+    textarea { min-height:100px; resize:vertical; }
+    .small { font-size:13px; color:var(--muted); }
+    .submit-row { display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
+    .submit { background:var(--accent); color:#022; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; }
+    .muted-box { background:rgba(255,255,255,0.02); padding:8px; border-radius:8px; font-size:13px; }
+    .admin-panel { display:none; margin-top:12px; }
+    .log { max-height:220px; overflow:auto; margin-top:8px; border-radius:8px; padding:8px; background:rgba(0,0,0,0.2); }
+    footer { margin-top:8px; color:var(--muted); font-size:13px; text-align:center; }
+    img.logo { height:36px; vertical-align:middle; }
+    .upload-preview { margin-top:8px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+    .upload-preview img { max-height:120px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); cursor:pointer; }
+    #photoModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); align-items:center; justify-content:center; z-index:9999; }
+    #photoModal img { max-height:90vh; max-width:90vw; border-radius:8px; }
+    #photoModalClose { position:absolute; top:20px; right:30px; font-size:20px; color:#fff; cursor:pointer; }
+    .entry-card { padding:8px; border-bottom:1px dashed rgba(255,255,255,0.08); }
+    .entry-card button { background:rgba(255,0,0,0.1); border:none; color:#f66; padding:4px 8px; border-radius:6px; cursor:pointer; margin-top:4px; }
+    .export-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; }
+
+    /* Responsive Adjustments for iPhones */
+    @media (max-width:430px) {
+      body { padding:12px; }
+      h1 { font-size:20px; justify-content:center; }
+      img.logo { height:28px; }
+      .btn, .submit { padding:8px 10px; font-size:13px; }
+      .card { padding:14px; }
+      input, textarea { font-size:14px; }
+      .row { flex-direction:column; gap:10px; }
+      .log { max-height:180px; font-size:12px; }
+    }
+    @media (max-width:380px) {
+      h1 { font-size:18px; text-align:center; }
+      .top-right { flex-direction:column; align-items:center; gap:4px; }
+      .submit { width:100%; }
+      footer { font-size:12px; }
+    }
+    @media (max-width:400px) and (min-width:381px) {
+      h1 { font-size:20px; }
+      .card { padding:16px; }
+      .submit { width:100%; }
+      .upload-preview img { max-height:100px; }
+    }
+    @media (max-width:450px) and (min-width:401px) {
+      h1 { font-size:22px; }
+      .upload-preview img { max-height:110px; }
+      .btn { font-size:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Olympic_rings_without_rims.svg/512px-Olympic_rings_without_rims.svg.png" alt="Olympic Logo" class="logo">
+        Shooter Diary
+      </h1>
+      <div class="top-right">
+        <div id="datetime" class="small muted-box">Loading date & time...</div>
+        <button class="btn" id="adminBtn">Admin</button>
+      </div>
+    </header>
+
+    <main>
+      <form id="diaryForm" class="card">
+        <div class="row">
+          <div class="col"><label>Date</label><input type="text" id="date" readonly /></div>
+          <div class="col"><label>Day</label><input type="text" id="day" readonly /></div>
+          <div class="col"><label>Time</label><input type="text" id="time" readonly /></div>
+        </div>
+
+        <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+        <label>1. The range / venue / place</label>
+        <input type="text" id="place" placeholder="e.g. East Range - Zone B" />
+
+        <div class="row" style="margin-top:10px">
+          <div class="col"><label>Sleep: hours slept</label><input type="number" id="sleep" min="0" max="24" step="0.1" placeholder="e.g. 7.5" /></div>
+          <div class="col"><label>Nutrition: what and when you eat</label><input type="text" id="nutrition" placeholder="e.g. 08:00 - oats; 12:30 - chicken salad" /></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="col"><label>Mood (1-10)</label><input type="range" id="mood" min="1" max="10" value="7" oninput="moodVal.innerText=this.value"><div class="small">Value: <span id="moodVal">7</span>/10</div></div>
+          <div class="col"><label>Motivation (1-10)</label><input type="range" id="motivation" min="1" max="10" value="7" oninput="motivationVal.innerText=this.value"><div class="small">Value: <span id="motivationVal">7</span>/10</div></div>
+          <div class="col"><label>Focus (1-10)</label><input type="range" id="focus" min="1" max="10" value="7" oninput="focusVal.innerText=this.value"><div class="small">Value: <span id="focusVal">7</span>/10</div></div>
+        </div>
+
+        <label style="margin-top:8px">Drill</label>
+        <textarea id="drill" placeholder="Describe the type of drill or exercise"></textarea>
+
+        <label style="margin-top:8px">Shot-by-shot Observation</label>
+        <textarea id="shotByObservation" placeholder="Shot-by-shot notes"></textarea>
+
+        <div style="margin-top:12px">
+          <label>Upload Cards / Targets Photos</label>
+          <input type="file" id="cardsPhoto" accept="image/*" multiple>
+          <div class="upload-preview" id="photoPreview"></div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="col"><label>What went well</label><textarea id="whatwentWell"></textarea></div>
+          <div class="col"><label>Problems to solve</label><textarea id="problems"></textarea></div>
+        </div>
+
+        <label style="margin-top:10px">Goal of the day</label>
+        <input type="text" id="goal" placeholder="e.g. Improve grouping at 100m" />
+
+        <div class="submit-row"><button type="submit" class="submit">Submit</button></div>
+        <div class="log" id="statusLog"></div>
+      </form>
+
+      <!-- Admin Panel -->
+      <div class="card admin-panel" id="adminPanel">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin-top:0">Admin Panel</h3>
+          <button class="btn" id="logoutAdmin">Logout</button>
+        </div>
+        <div class="small muted-box">Protected area. Use to view / export entries.</div>
+
+        <div style="margin-top:10px">
+          <label>Web App URL for Google Sheets</label>
+          <input type="text" id="gappUrl" placeholder="https://script.google.com/macros/s/...." />
+        </div>
+
+        <div style="margin-top:10px" class="row">
+          <div class="col">
+            <label>Admin password</label>
+            <input type="password" id="adminPass" placeholder="change default" />
+          </div>
+          <div class="col">
+            <label>Export / Actions</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+              <button class="btn" id="exportAllPDF">Export All PDF</button>
+              <button class="btn" id="exportByDateBtn">Export by Date Range</button>
+              <button class="btn" id="exportByFocusBtn">Export by Focus</button>
+              <button class="btn" id="exportJSON">Export JSON</button>
+              <button class="btn" id="viewPhotosBtn">View Uploaded Photos</button>
+            </div>
+
+            <div class="export-controls" style="margin-top:8px;">
+              <label class="small" style="margin-right:6px">From</label>
+              <input type="date" id="exportFrom">
+              <label class="small" style="margin-left:8px;margin-right:6px">To</label>
+              <input type="date" id="exportTo">
+              <label class="small" style="margin-left:8px;margin-right:6px">Focus ≥</label>
+              <input type="number" id="exportFocus" min="1" max="10" placeholder="7">
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:10px">
+          <label>Entries</label>
+          <div id="entriesList" class="log"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>Tip: Entries save locally if no Google Sheet is set.</footer>
+  </div>
+
+  <!-- Photo Modal -->
+  <div id="photoModal">
+    <span id="photoModalClose">✖</span>
+    <img id="photoModalImg" src="" alt="">
+  </div>
+
+<script>
+const DEFAULT_ADMIN_PASSWORD='admin123';
+const $=id=>document.getElementById(id);
+
+// ---------- Date/time ----------
+function updateDateTime(){
+  const now=new Date();
+  $('date').value=now.toLocaleDateString();
+  $('day').value=now.toLocaleDateString(undefined,{weekday:'long'});
+  $('time').value=now.toLocaleTimeString();
+  $('datetime').innerText=`${$('date').value} — ${$('day').value} — ${$('time').value}`;
+}
+updateDateTime();setInterval(updateDateTime,1000);
+
+// ---------- image helpers ----------
+function getBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
+function isPng(dataUrl){return dataUrl.startsWith('data:image/png');}
+
+// preview selected photos
+$('cardsPhoto').addEventListener('change',e=>{
+  const files=[...e.target.files];const p=$('photoPreview');p.innerHTML='';
+  files.forEach(f=>{
+    const img=document.createElement('img');img.src=URL.createObjectURL(f);img.onclick=()=>openPhoto(img.src);
+    p.appendChild(img);
+  });
+});
+
+// ---------- read and save form ----------
+async function readForm(){
+  const files=[...$('cardsPhoto').files];
+  const photos=await Promise.all(files.map(getBase64));
+  return{
+    date:$('date').value,day:$('day').value,time:$('time').value,
+    place:$('place').value,sleep:$('sleep').value,nutrition:$('nutrition').value,
+    mood:$('mood').value,motivation:$('motivation').value,focus:$('focus').value,
+    drill:$('drill').value,shotByObservation:$('shotByObservation').value,
+    cardsPhotos:photos,whatwentWell:$('whatwentWell').value,problems:$('problems').value,goal:$('goal').value
+  };
+}
+
+function saveLocalEntry(o){
+  const k='shooter_diary_entries';
+  const arr=JSON.parse(localStorage.getItem(k)||'[]');
+  arr.push(o);
+  localStorage.setItem(k,JSON.stringify(arr));
+  renderEntries();
+}
+
+// submit
+$('diaryForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const data=await readForm();
+  saveLocalEntry(data);
+  alert('Entry saved locally!');
+  e.target.reset();$('photoPreview').innerHTML='';
+});
+
+// ---------- admin login ----------
+$('adminBtn').addEventListener('click',()=>{
+  const pass=prompt('Enter admin password:');
+  const stored=localStorage.getItem('shooter_admin_pass')||DEFAULT_ADMIN_PASSWORD;
+  if(pass===stored){$('adminPanel').style.display='block';$('adminPass').value=stored;renderEntries();}
+  else alert('Wrong password');
+});
+$('logoutAdmin').addEventListener('click',()=>{$('adminPanel').style.display='none';});
+$('adminPass').addEventListener('change',()=>{localStorage.setItem('shooter_admin_pass',$('adminPass').value);});
+
+// ---------- render entries ----------
+function renderEntries(){
+  const arr=JSON.parse(localStorage.getItem('shooter_diary_entries')||'[]');
+  const out=$('entriesList');out.innerHTML='';
+  if(!arr.length){out.innerText='No local entries found.';return;}
+  // show reversed (latest first)
+  arr.slice().reverse().forEach((it, idx)=>{
+    const realIndex = arr.length - 1 - idx;
+    const d=document.createElement('div');d.className='entry-card';
+    let imgsHTML='';
+    if(it.cardsPhotos && it.cardsPhotos.length){
+      imgsHTML=`<div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;'>${it.cardsPhotos.map(s=>`<img src="${s}" style="max-height:80px;border-radius:6px;cursor:pointer;" onclick='openPhoto("${s}")'>`).join('')}</div>`;
+    }
+    d.innerHTML=`<strong>${it.date} ${it.time}</strong> — ${it.place||''}
+      <div class='small'>Mood:${it.mood} | Motivation:${it.motivation} | Focus:${it.focus}</div>
+      <div class='small'>Sleep:${it.sleep} | Goal:${it.goal}</div>
+      ${imgsHTML}
+      <div style="margin-top:6px"><button onclick="deleteEntry(${realIndex})">🗑 Delete</button></div>`;
+    out.appendChild(d);
+  });
+}
+
+// delete entry
+function deleteEntry(index){
+  if(!confirm('Delete this entry?')) return;
+  const k='shooter_diary_entries'; const arr=JSON.parse(localStorage.getItem(k)||'[]');
+  arr.splice(index,1); localStorage.setItem(k,JSON.stringify(arr)); renderEntries();
+}
+
+// photo modal
+function openPhoto(src){$('photoModalImg').src=src; $('photoModal').style.display='flex';}
+$('photoModalClose').onclick=()=>{$('photoModal').style.display='none';};
+$('photoModal').onclick=e=>{ if(e.target.id==='photoModal') $('photoModal').style.display='none'; };
+
+// view photos button - cycle through images
+$('viewPhotosBtn').onclick=()=>{
+  const entries=JSON.parse(localStorage.getItem('shooter_diary_entries')||'[]');
+  if(!entries.length) return alert('No photos found!');
+  const imgs=entries.flatMap(e=>e.cardsPhotos||[]);
+  if(!imgs.length) return alert('No uploaded photos!');
+  let i=0;
+  function showNext(){ if(i>=imgs.length) i=0; openPhoto(imgs[i++]); }
+  showNext();
+  $('photoModalImg').onclick=showNext;
+};
+
+// export JSON (existing)
+$('exportJSON').onclick=()=>{
+  const arr=JSON.parse(localStorage.getItem('shooter_diary_entries')||'[]');
+  const blob=new Blob([JSON.stringify(arr, null, 2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='shooter_diary_entries.json'; a.click(); URL.revokeObjectURL(url);
+};
+
+// ---------- PDF export helpers ----------
+async function exportToPdfAndOpen(entries, filenamePrefix='shooter_diary'){
+  if(!entries.length){ alert('No entries to export'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt', format:'a4'});
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 40;
+  const usableWidth = pageWidth - margin*2;
+
+  for(let i=0;i<entries.length;i++){
+    const it = entries[i];
+    doc.setFontSize(14); doc.setTextColor(10,10,10);
+    let y = 50;
+    // Title
+    doc.setFontSize(16);
+    doc.text(`Shooter Diary Entry`, margin, y);
+    doc.setFontSize(11);
+    y += 22;
+    // Basic fields
+    const lines = [
+      `Date: ${it.date}`,
+      `Time: ${it.time}`,
+      `Place: ${it.place || ''}`,
+      `Goal: ${it.goal || ''}`,
+      `Mood: ${it.mood || ''} | Motivation: ${it.motivation || ''} | Focus: ${it.focus || ''}`,
+      `Sleep: ${it.sleep || ''} | Nutrition: ${it.nutrition || ''}`,
+      `Drill: ${it.drill || ''}`,
+      `Shot-by-shot: ${it.shotByObservation || ''}`,
+      `Went well: ${it.whatwentWell || ''}`,
+      `Problems: ${it.problems || ''}`
+    ];
+    doc.setFontSize(11);
+    lines.forEach(line=>{
+      const split = doc.splitTextToSize(line, usableWidth);
+      doc.text(split, margin, y);
+      y += (split.length * 14);
+    });
+
+    // Photos (thumbnails)
+    if(it.cardsPhotos && it.cardsPhotos.length){
+      y += 8;
+      const thumbMaxW = 110;
+      const thumbMaxH = 80;
+      let x = margin;
+      let rowHeight = 0;
+      for(let p = 0; p < it.cardsPhotos.length; p++){
+        const src = it.cardsPhotos[p];
+        try{
+          const imgType = isPng(src) ? 'PNG' : 'JPEG';
+          if(x + thumbMaxW > margin + usableWidth){
+            x = margin; y += rowHeight + 8; rowHeight = 0;
+          }
+          try{
+            doc.addImage(src, imgType, x, y, thumbMaxW, thumbMaxH);
+          }catch(addErr){
+            const imgEl = await loadImageElement(src);
+            const resized = resizeImageToDataURL(imgEl, thumbMaxW, thumbMaxH);
+            const rType = resized.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(resized, rType, x, y, thumbMaxW, thumbMaxH);
+          }
+          x += thumbMaxW + 8;
+          if(thumbMaxH > rowHeight) rowHeight = thumbMaxH;
+        }catch(errImg){
+          console.warn('Could not add image to PDF', errImg);
+        }
+      }
+      y += rowHeight + 12;
+    }
+
+    if(i < entries.length - 1) doc.addPage();
+  }
+
+  const pdfBlob = doc.output('blob');
+  const url = URL.createObjectURL(pdfBlob);
+  window.open(url, '_blank');
+}
+
+// helper: load image element from dataURL
+function loadImageElement(dataUrl){ return new Promise((res, rej)=>{ const img = new Image(); img.onload = ()=>res(img); img.onerror = rej; img.src = dataUrl; }); }
+
+// helper: resize image using canvas, maintain aspect ratio, return dataURL
+function resizeImageToDataURL(imgEl, maxW, maxH){
+  const canvas = document.createElement('canvas');
+  const ratio = Math.min(maxW / imgEl.width, maxH / imgEl.height, 1);
+  const w = imgEl.width * ratio;
+  const h = imgEl.height * ratio;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imgEl, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', 0.8);
+}
+
+// ---------- export button handlers ----------
+$('exportAllPDF').addEventListener('click', async ()=>{
+  const arr = JSON.parse(localStorage.getItem('shooter_diary_entries')||'[]');
+  if(!arr.length) return alert('No entries to export.');
+  await exportToPdfAndOpen(arr,'shooter_diary_all');
+});
+
+$('exportByDateBtn').addEventListener('click', async ()=>{
+  const from = $('exportFrom').value;
+  const to = $('exportTo').value;
+  if(!from || !to) return alert('Please select both From and To dates.');
+  const fromDate = new Date(from);
+  const toDate = new Date(to); toDate.setHours(23,59,59,999);
+  const arr = JSON.parse(localStorage.getItem('shooter_diary_entries')||'[]');
+  const filtered = arr.filter(e=>{
+    const dt = new Date(e.date);
+    if(isNaN(dt)) return false;
+    return dt >= fromDate && dt <= toDate;
+  });
+  if(!filtered.length) return alert('No entries found in that date range.');
+  await exportToPdfAndOpen(filtered,`shooter_diary_${from}_to_${to}`);
+});
+
+$('exportByFocusBtn').addEventListener('click', async ()=>{
+  const threshold = Number($('exportFocus').value);
+  if(!threshold || isNaN(threshold)) return alert('Please enter a numeric focus threshold.');
+  const arr = JSON.parse(localStorage.getItem('shooter_diary_entries')||'[]');
+  const filtered = arr.filter(e=> Number(e.focus) >= threshold);
+  if(!filtered.length) return alert('No entries match that focus threshold.');
+  await exportToPdfAndOpen(filtered,`shooter_diary_focus_${threshold}`);
+});
+
+// ---------- utilities ----------
+function isPng(dataUrl){return dataUrl.startsWith('data:image/png');}
+
+// initial render
+renderEntries();
+</script>
+</body>
+</html>
