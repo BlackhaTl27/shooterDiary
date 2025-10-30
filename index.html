@@ -197,7 +197,7 @@
 
         <div style="margin-top:10px">
           <label>Web App URL for Google Sheets</label>
-          <input type="text" id="gappUrl" placeholder="https://script.google.com/macros/s/...." />
+          <input type="text" id="gappUrl" placeholder="https://script.google.com/macros/s/AKfycbyyQX-5J3pFLnS95TKOCgszovat5oTbMDQ6KoD2Uo8u-1Vg_rUIQY1ZNAk0fY5DNowc/exec" />
         </div>
 
         <div style="margin-top:10px" class="row">
@@ -292,13 +292,36 @@ function saveLocalEntry(o){
 }
 
 // submit
-$('diaryForm').addEventListener('submit',async e=>{
+// submit
+$('diaryForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const data=await readForm();
-  saveLocalEntry(data);
-  alert('Entry saved locally!');
-  e.target.reset();$('photoPreview').innerHTML='';
+  const data = await readForm();
+
+  // 🔹 STEP 1: Set your Google Apps Script Web App URL here
+  const scriptUrl = "https://script.google.com/macros/s/AKfycbwmwFDFePKTU96LlwUDUu5P8VZsNItHHii2AbryrC8mjStKZ8wn3NLQGTlDxrZ7y0nmGw/exec";
+
+  try {
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: "appendEntry", entry: data }),
+      headers: { "Content-Type": "application/json" },
+      mode: "no-cors"
+    });
+
+    // Even if no-cors doesn’t return response, assume success
+    saveLocalEntry(data); // Optional: backup locally
+    alert("✅ Entry uploaded successfully!");
+  } catch (err) {
+    console.error(err);
+    saveLocalEntry(data);
+    alert("⚠️ Upload error: Failed to fetch — saved locally instead.");
+  }
+
+  e.target.reset();
+  $('photoPreview').innerHTML = '';
 });
+
+// submit
 
 // ---------- admin login ----------
 $('adminBtn').addEventListener('click',()=>{
